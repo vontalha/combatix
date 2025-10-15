@@ -1,6 +1,10 @@
+import { useTabBarStore } from "@/store/tabBarStore";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
+import Animated, {
+    useAnimatedStyle,
+    withTiming,
+} from "react-native-reanimated";
 import TabBarButton from "./TabBarButton";
 
 export function MyTabBar({
@@ -8,10 +12,22 @@ export function MyTabBar({
 	descriptors,
 	navigation,
 }: BottomTabBarProps) {
+	const isVisible = useTabBarStore((state) => state.isVisible);
 
+	const animatedStyle = useAnimatedStyle(() => {
+		return {
+			transform: [
+				{
+					translateY: withTiming(isVisible ? 0 : 150, {
+						duration: 300,
+					}),
+				},
+			],
+		};
+	});
 
 	return (
-		<View style={styles.tabbar}>
+		<Animated.View style={[styles.tabbar, animatedStyle]}>
 			{state.routes.map((route, index) => {
 				const { options } = descriptors[route.key];
 				const label =
@@ -49,8 +65,8 @@ export function MyTabBar({
 						onLongPress={onLongPress}
 						isFocused={isFocused}
 						routeName={route.name}
-                        color={isFocused ? "#DA0037" : "#EDEDED"}
-                        label={label}
+						color={isFocused ? "#DA0037" : "#EDEDED"}
+						label={label}
 					/>
 					// <PlatformPressable
 					// 	key={route.name}
@@ -72,7 +88,7 @@ export function MyTabBar({
 					// </PlatformPressable>
 				);
 			})}
-		</View>
+		</Animated.View>
 	);
 }
 
@@ -80,12 +96,12 @@ const styles = StyleSheet.create({
 	tabbar: {
 		position: "absolute",
 		flexDirection: "row",
-		bottom: 40,
+		bottom: 30,
 		alignItems: "center",
 		justifyContent: "space-between",
-		marginHorizontal: 28,
-		backgroundColor: "white",
-		padding: 13,
+		marginHorizontal: 40,
+		backgroundColor: "#DA0037",
+		padding: 11,
 		borderRadius: 28,
 		shadowColor: "#000",
 		shadowOffset: { width: 0, height: 10 },

@@ -4,20 +4,20 @@ import React from "react";
 
 export const iconPicker = {
 	index: (props: any) => (
-		<LayoutDashboard size={26} color={props.color} strokeWidth={2} />
+		<LayoutDashboard size={26} color={props.color} strokeWidth={2.2} />
 	),
 	training: (props: any) => (
 		<BoxingGlovesIcon
 			height={26}
 			width={26}
 			color={props.color}
-			strokeWidth={4}
+			strokeWidth={8}
 		/>
 	),
 	analytics: (props: any) => (
-		<ChartNoAxesColumn size={26} color={props.color} strokeWidth={2} />
+		<ChartNoAxesColumn size={26} color={props.color} strokeWidth={2.5} />
 	),
 	profile: (props: any) => (
-		<User size={26} color={props.color} strokeWidth={2} />
+		<User size={26} color={props.color} strokeWidth={2.2} />
 	),
 };

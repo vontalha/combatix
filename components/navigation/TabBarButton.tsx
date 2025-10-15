@@ -61,15 +61,17 @@ export default function TabBarButton({
 		>
 			<Animated.View style={animatedIconStyle}>
 				{iconPicker[routeName]({
-					color: isFocused ? "white" : "black",
+					color: isFocused ? "#EDEDED" : "#EDEDED",
 				})}
 			</Animated.View>
 
 			<Animated.Text
 				style={[
 					{
-						color: isFocused ? "white" : "black",
+						color: isFocused ? "#DA0037" : "#EDEDED",
+                        fontFamily: "BebasNeue_400Regular",
 						fontSize: 12,
+                        fontWeight: "600"
 					},
 					animatedTextStyle,
 				]}
