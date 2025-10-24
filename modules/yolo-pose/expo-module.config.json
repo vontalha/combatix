@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["YoloPoseModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.yolopose.YoloPoseModule"]
+  }
+}
