@@ -20,7 +20,6 @@ public class YoloPoseView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegat
     private var bufferSize: CGSize = .zero
     private var requests = [VNRequest]()
     
-    // YOLO Pose parameters
     private let confidenceThreshold: Float = 0.25
     private let numKeypoints = 17
 
@@ -83,23 +82,32 @@ public class YoloPoseView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegat
     }
 
     private func setupVision() throws {
+        print("🔍 Looking for model: yolo11n-pose-int8.mlmodelc")
         guard let modelURL = Bundle.main.url(
             forResource: "yolo11n-pose-int8",
             withExtension: "mlmodelc"
         ) else {
+            print("❌ Model not found in bundle!")
             throw YoloPoseViewError.mlModelNotFound
         }
+
+        print("✅ Model found at: \(modelURL)")
         
         do {
             let mlModel = try MLModel(contentsOf: modelURL)
+            print("✅ MLModel loaded")
+            
             let visionModel = try VNCoreMLModel(for: mlModel)
+            print("✅ VNCoreMLModel created")
             
             let detectionRequest = VNCoreMLRequest(
                 model: visionModel,
                 completionHandler: handleDetection
             )
             self.requests = [detectionRequest]
+            print("✅ VNCoreMLRequest created")
         } catch {
+            print("❌ Model loading failed: \(error)")
             throw YoloPoseViewError.mlModelLoadingFailed(error)
         }
     }
@@ -141,64 +149,68 @@ public class YoloPoseView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegat
         guard let results = request.results as? [VNCoreMLFeatureValueObservation],
               let firstResult = results.first,
               let multiArray = firstResult.featureValue.multiArrayValue else {
+            print("⚠️ Could not get multiArray from results")
             return
         }
         
+        // Parse YOLO output: [1, 56, 8400]
+        // 56 channels = 4 (bbox) + 1 (conf) + 51 (17 keypoints * 3)
         let shape = multiArray.shape.map { $0.intValue }
-        var allPoses: [[String: Any]] = []
+        print("📊 Processing output shape: \(shape)")
         
-        // Iterate through all detections
-        for i in 0..<shape[2] {
-            let confIndex = [0, 4, i] as [NSNumber]
-            let confidence = multiArray[confIndex].floatValue
+        var allKeypoints: [[String: Any]] = []
+        
+        // Iterate through all 8400 detections
+        var allPoses: [[String: Any]] = []  // Statt allKeypoints
+
+for i in 0..<shape[2] {
+    let confIndex = [0, 4, i] as [NSNumber]
+    let confidence = multiArray[confIndex].floatValue
+    
+    if confidence > confidenceThreshold {
+        // Get bounding box
+        let xIndex = [0, 0, i] as [NSNumber]
+        let yIndex = [0, 1, i] as [NSNumber]
+        let wIndex = [0, 2, i] as [NSNumber]
+        let hIndex = [0, 3, i] as [NSNumber]
+        
+        let centerX = multiArray[xIndex].floatValue
+        let centerY = multiArray[yIndex].floatValue
+        let width = multiArray[wIndex].floatValue
+        let height = multiArray[hIndex].floatValue
+        
+        // Get keypoints for THIS person
+        var keypoints: [[String: Any]] = []
+        for kp in 0..<numKeypoints {
+            let baseIdx = 5 + (kp * 3)
+            let xIdx = [0, baseIdx, i] as [NSNumber]
+            let yIdx = [0, baseIdx + 1, i] as [NSNumber]
+            let confIdx = [0, baseIdx + 2, i] as [NSNumber]
             
-            if confidence > confidenceThreshold {
-                // Get bounding box
-                let xIndex = [0, 0, i] as [NSNumber]
-                let yIndex = [0, 1, i] as [NSNumber]
-                let wIndex = [0, 2, i] as [NSNumber]
-                let hIndex = [0, 3, i] as [NSNumber]
-                
-                let centerX = multiArray[xIndex].floatValue
-                let centerY = multiArray[yIndex].floatValue
-                let width = multiArray[wIndex].floatValue
-                let height = multiArray[hIndex].floatValue
-                
-                // Get keypoints for THIS person
-                var keypoints: [[String: Any]] = []
-                for kp in 0..<numKeypoints {
-                    let baseIdx = 5 + (kp * 3)
-                    let xIdx = [0, baseIdx, i] as [NSNumber]
-                    let yIdx = [0, baseIdx + 1, i] as [NSNumber]
-                    let confIdx = [0, baseIdx + 2, i] as [NSNumber]
-                    
-                    keypoints.append([
-                        "x": Double(multiArray[xIdx].floatValue),
-                        "y": Double(multiArray[yIdx].floatValue),
-                        "confidence": Double(multiArray[confIdx].floatValue)
-                    ])
-                }
-                
-                // Add THIS person's pose
-                allPoses.append([
-                    "bbox": [
-                        "x": Double(centerX),
-                        "y": Double(centerY),
-                        "width": Double(width),
-                        "height": Double(height)
-                    ],
-                    "confidence": Double(confidence),
-                    "keypoints": keypoints
-                ])
-            }
+            keypoints.append([
+                "x": Double(multiArray[xIdx].floatValue),
+                "y": Double(multiArray[yIdx].floatValue),
+                "confidence": Double(multiArray[confIdx].floatValue)
+            ])
         }
         
-        print("✅ Detected \(allPoses.count) people with \(allPoses.count * numKeypoints) total keypoints")
-        
-        DispatchQueue.main.async { [weak self] in
-            self?.onResult(["poses": allPoses])
-        }
+        // Add THIS person's pose
+        allPoses.append([
+            "bbox": [
+                "x": Double(centerX),
+                "y": Double(centerY),
+                "width": Double(width),
+                "height": Double(height)
+            ],
+            "confidence": Double(confidence),
+            "keypoints": keypoints
+        ])
     }
+}
+
+DispatchQueue.main.async { [weak self] in
+    self?.onResult(["poses": allPoses])  // Array of poses
+}
 
     public func captureOutput(
         _ output: AVCaptureOutput,
