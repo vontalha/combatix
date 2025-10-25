@@ -2,21 +2,25 @@ import { requireNativeViewManager } from "expo-modules-core";
 import * as React from "react";
 import { ViewProps } from "react-native";
 
+export interface Keypoint {
+  x: number;
+  y: number;
+  confidence: number;
+}
+
+export interface Pose {
+  bbox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  confidence: number;
+  keypoints: Keypoint[];
+}
+
 export type OnResultEvent = {
-  poses: Array<{
-    bbox: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    };
-    confidence: number;
-    keypoints: Array<{
-      x: number;
-      y: number;
-      confidence: number;
-    }>;
-  }>;
+  poses: Pose[];
 };
 
 export type YoloPoseViewProps = {
